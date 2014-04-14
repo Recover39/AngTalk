@@ -1,11 +1,5 @@
 package com.example.angtalk.app;
 
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * Created by ganghan-yong on 2014. 3. 23..
- */
 public class MessageData {
     private String sender;
     private String receiver;
@@ -15,5 +9,17 @@ public class MessageData {
         this.sender = sender;
         this.receiver = receiver;
         this.messageData = messageData;
+    }
+
+    public String getSender() {
+        return sender;
+    }
+
+    public String getReceiver() {
+        return receiver;
+    }
+
+    public String getMessageData() {
+        return messageData;
     }
 }

@@ -8,8 +8,22 @@
         android:id="@+id/listViewMessage"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_above="@+id/buttonSend"
+        android:layout_above="@+id/editTextSender"
         android:transcriptMode="alwaysScroll" />
+    <EditText
+        android:id="@+id/editTextSender"
+        android:text="sender"
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:layout_above="@+id/buttonSend"
+        android:layout_toLeftOf="@+id/editTextReceiver" />
+    <EditText
+        android:id="@+id/editTextReceiver"
+        android:text="receiver"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_above="@+id/buttonSend"
+        android:layout_alignParentRight="true" />
     <EditText
         android:id="@+id/editTextInput"
         android:layout_width="fill_parent"

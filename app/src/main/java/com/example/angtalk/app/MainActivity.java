@@ -1,13 +1,12 @@
 package com.example.angtalk.app;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,18 +22,19 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.gson.Gson;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends ActionBarActivity {
 
     public static final String TAG = "AngTok";
 
-    EditText editTextInput;
-    ArrayList<String> arrayList;
-    ArrayAdapter<String> simpleAdapter;
-    MessageData msgData;
+    EditText editTextInput, editTextSender, editTextReceiver;
+    String inputedText, sender, receiver, jsonData;
     Gson gson;
+    MessageData msgData;
+    ControlMessage controlMessage;
+    MessagesStorage messagesStorage;
+    private static ArrayAdapter<String> simpleAdapter;
 
     /* These are for GCM */
     public static final String PROPERTY_REG_ID = "registration_id";
@@ -46,7 +46,6 @@ public class MainActivity extends ActionBarActivity {
     String regid;
     String SENDER_ID = "477958854971";
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,34 +54,47 @@ public class MainActivity extends ActionBarActivity {
         ListView messageList = (ListView) findViewById(R.id.listViewMessage);
         Button sendButton = (Button) findViewById(R.id.buttonSend);
         editTextInput = (EditText) findViewById(R.id.editTextInput);
+        editTextSender = (EditText) findViewById(R.id.editTextSender);
+        editTextReceiver = (EditText) findViewById(R.id.editTextReceiver);
 
-        arrayList = new ArrayList<String>();
-        simpleAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, arrayList);
-        msgData = new MessageData();
         gson = new Gson();
-
+        msgData = new MessageData();
+        controlMessage = ControlMessage.getInstance();
+        messagesStorage = new MessagesStorage(this);
+        simpleAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, controlMessage.getArrayList());
 
         messageList.setAdapter(simpleAdapter);
+
+        messagesStorage.getAllMessage();    // Get all messages from DB
+        simpleAdapter.notifyDataSetChanged();   // Notify data set changed
+        messageList.setSelection(messageList.getCount() - 1);   // Show end of list
 
         sendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String inputedText = editTextInput.getText().toString();    // Get text stuff
+                inputedText = editTextInput.getText().toString();    // Get text stuff
+                sender = editTextSender.getText().toString();    // Get text stuff
+                receiver = editTextReceiver.getText().toString();    // Get text stuff
 
                 if(!inputedText.equals("")) {
-                    arrayList.add("나 : " + inputedText);
-                    msgData.setData("Sugarpoint", "Namhoon", inputedText);
+                    if(inputedText.equals("clear db")) {
+                        messagesStorage.clearMessage();
+                        simpleAdapter.notifyDataSetChanged();   // notify data set changed
+                    }  // DB clear
+
+                    msgData.setData(sender, receiver, inputedText);
+                    jsonData = gson.toJson(msgData);
+                    controlMessage.addMesseage(0, jsonData);
+                    messagesStorage.saveMessage(sender, inputedText);
 
                     try {
-                        Log.i(TAG, "JSON : " + gson.toJson(msgData));
-                        new MakeRequest().execute(gson.toJson(msgData));
+                        new MakeRequest().execute(jsonData);
                     }
                     catch(Exception e)
                     {
-                        Log.e(TAG, "Make Request Error : " + e.toString());
+                        Log.e("ERR : ", e.toString());
                     }
 
-                    simpleAdapter.notifyDataSetChanged();
                     editTextInput.setText("");
                 }
             }
@@ -239,11 +251,6 @@ public class MainActivity extends ActionBarActivity {
         }.execute(null, null, null);
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     /**
      * @return Application's version code from the {@code PackageManager}.
      */
@@ -275,6 +282,14 @@ public class MainActivity extends ActionBarActivity {
     private void sendRegistrationIdToBackend() {
         // Your implementation here.
     }
+
+    public static ArrayAdapter<String> getSimpleAdapter() {
+        return simpleAdapter;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        controlMessage.getArrayList().clear();
+    }
 }
-
-
