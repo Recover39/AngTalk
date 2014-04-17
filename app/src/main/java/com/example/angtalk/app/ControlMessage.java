@@ -11,10 +11,11 @@ public class ControlMessage {
     private ArrayList<String> arrayList = new ArrayList<String>();
 
     public void addMesseage(int status, String json) {
-        md = gson.fromJson(json, MessageData.class);
 
         switch(status) {
             case 0:
+                md = gson.fromJson(json, MessageData.class);
+
                 arrayList.add(md.getSender() + " : " + md.getMessageData());
                 break;
 

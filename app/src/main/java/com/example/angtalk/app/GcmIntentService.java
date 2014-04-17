@@ -21,13 +21,13 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 public class GcmIntentService extends IntentService {
     public static final int NOTIFICATION_ID = 1;
     private NotificationManager mNotificationManager;
-    NotificationCompat.Builder builder;
+//  NotificationCompat.Builder builder;
 
     public GcmIntentService() {
         super("GcmIntentService");
     }
 
-    public static final String TAG = "AngTok";
+    public static final String TAG = "AngTalk";
 
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -50,12 +50,13 @@ public class GcmIntentService extends IntentService {
                 // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
                 String msg = extras.getString("messageData");
-
                 // Post notification of received message.
                 sendNotification("Received: " + msg);
+
                 Log.i(TAG, "Received: " + extras.toString());
             }
         }
+
         // Release the wake lock provided by the WakefulBroadcastReceiver.
         GcmBroadcastReceiver.completeWakefulIntent(intent);
     }
@@ -81,5 +82,7 @@ public class GcmIntentService extends IntentService {
 
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
+
+        // ControlMessage.getInstance().addMesseage(1, msg);
     }
 }

@@ -1,6 +1,8 @@
 package com.example.angtalk.app;
 
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -8,8 +10,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends ActionBarActivity {
 
-    public static final String TAG = "AngTok";
+    public static final String TAG = "AngTalk";
 
     EditText editTextInput, editTextSender, editTextReceiver;
     String inputedText, sender, receiver, jsonData;
@@ -37,7 +37,7 @@ public class MainActivity extends ActionBarActivity {
     private static ArrayAdapter<String> simpleAdapter;
 
     /* These are for GCM */
-    public static final String PROPERTY_REG_ID = "registration_id";
+    public static final String PROPERTY_REG_ID = "nhnnext";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     GoogleCloudMessaging gcm;
@@ -48,6 +48,16 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        context = getApplicationContext();
+
+        // GCM 등록과
+        Intent registrationIntent = new Intent("com.google.android.c2dm.intent.REGISTER");
+        // sets the app name in the intent
+        registrationIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
+        registrationIntent.putExtra("sender", SENDER_ID);
+        startService(registrationIntent);
+        Log.i(TAG, "Stack");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -65,42 +75,11 @@ public class MainActivity extends ActionBarActivity {
 
         messageList.setAdapter(simpleAdapter);
 
+        // this.registerReceiver(GcmBroadcastReceiver, null);
+
         messagesStorage.getAllMessage();    // Get all messages from DB
         simpleAdapter.notifyDataSetChanged();   // Notify data set changed
         messageList.setSelection(messageList.getCount() - 1);   // Show end of list
-
-        sendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                inputedText = editTextInput.getText().toString();    // Get text stuff
-                sender = editTextSender.getText().toString();    // Get text stuff
-                receiver = editTextReceiver.getText().toString();    // Get text stuff
-
-                if(!inputedText.equals("")) {
-                    if(inputedText.equals("clear db")) {
-                        messagesStorage.clearMessage();
-                        simpleAdapter.notifyDataSetChanged();   // notify data set changed
-                    }  // DB clear
-
-                    msgData.setData(sender, receiver, inputedText);
-                    jsonData = gson.toJson(msgData);
-                    controlMessage.addMesseage(0, jsonData);
-                    messagesStorage.saveMessage(sender, inputedText);
-
-                    try {
-                        new MakeRequest().execute(jsonData);
-                    }
-                    catch(Exception e)
-                    {
-                        Log.e("ERR : ", e.toString());
-                    }
-
-                    editTextInput.setText("");
-                }
-            }
-        });
-
-        context = getApplicationContext();
 
         // Check device for Play Services APK. If check succeeds, proceed with GCM registration.
         if (checkPlayServices()) {
@@ -113,40 +92,39 @@ public class MainActivity extends ActionBarActivity {
         } else {
             Log.i(TAG, "No valid Google Play Services APK found.");
         }
+
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                inputedText = editTextInput.getText().toString();    // Get text stuff
+                sender = editTextSender.getText().toString();    // Get text stuff
+                receiver = editTextReceiver.getText().toString();    // Get text stuff
+
+                if (!inputedText.equals("")) {
+                    if (inputedText.equals("clear db")) {
+                        messagesStorage.clearMessage();
+                        simpleAdapter.notifyDataSetChanged();   // notify data set changed
+                    }  // DB clear
+
+                    msgData.setData(sender, receiver, inputedText);
+                    jsonData = gson.toJson(msgData);
+                    controlMessage.addMesseage(0, jsonData);
+                    messagesStorage.saveMessage(sender, inputedText);
+
+                    try {
+                        new MakeRequest().execute(jsonData);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.e("ERR : ", e.toString());
+                    }
+
+                    editTextInput.setText("");
+                }
+            }
+        });
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Check device for Play Services APK.
-        checkPlayServices();
-    }
-
-    /**
-     * Check the device to make sure it has the Google Play Services APK. If
-     * it doesn't, display a dialog that allows users to download the APK from
-     * the Google Play Store or enable it in the device's system settings.
-     */
     private boolean checkPlayServices() {
         int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
         if (resultCode != ConnectionResult.SUCCESS) {
@@ -159,6 +137,7 @@ public class MainActivity extends ActionBarActivity {
             }
             return false;
         }
+
         return true;
     }
 
@@ -194,6 +173,7 @@ public class MainActivity extends ActionBarActivity {
             Log.i(TAG, "Registration not found.");
             return "";
         }
+
         // Check if app was updated; if so, it must clear the registration ID
         // since the existing regID is not guaranteed to work with the new
         // app version.
@@ -203,6 +183,7 @@ public class MainActivity extends ActionBarActivity {
             Log.i(TAG, "App version changed.");
             return "";
         }
+
         return registrationId;
     }
 
@@ -226,13 +207,11 @@ public class MainActivity extends ActionBarActivity {
 
                     // You should send the registration ID to your server over HTTP, so it
                     // can use GCM/HTTP or CCS to send messages to your app.
-                    Log.i(TAG, regid);
                     sendRegistrationIdToBackend();
 
                     // For this demo: we don't need to send it because the device will send
                     // upstream messages to a server that echo back the message using the
                     // 'from' address in the message.
-
                     // Persist the regID - no need to register again.
                     storeRegistrationId(context, regid);
                 } catch (IOException ex) {
@@ -274,6 +253,7 @@ public class MainActivity extends ActionBarActivity {
         return getSharedPreferences(MainActivity.class.getSimpleName(),
                 Context.MODE_PRIVATE);
     }
+
     /**
      * Sends the registration ID to your server over HTTP, so it can use GCM/HTTP or CCS to send
      * messages to your app. Not needed for this demo since the device sends upstream messages
@@ -285,6 +265,13 @@ public class MainActivity extends ActionBarActivity {
 
     public static ArrayAdapter<String> getSimpleAdapter() {
         return simpleAdapter;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Check device for Play Services APK.
+        checkPlayServices();
     }
 
     @Override

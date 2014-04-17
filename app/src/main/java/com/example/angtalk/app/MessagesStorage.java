@@ -31,7 +31,7 @@ public class MessagesStorage {
     }
 
     public void clearMessage() {    // 모든 메세지 삭제
-        sql = "DELETE FROM CONVERSATION; VACUUM";
+        sql = "DELETE FROM CONVERSATION; VACUUM;";
         database.execSQL(sql);
 
         controlMessage.getArrayList().clear();
