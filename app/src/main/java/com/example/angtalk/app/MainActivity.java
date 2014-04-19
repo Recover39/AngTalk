@@ -1,8 +1,10 @@
 package com.example.angtalk.app;
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -22,6 +24,7 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.gson.Gson;
 
 import java.io.IOException;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends ActionBarActivity {
@@ -35,9 +38,10 @@ public class MainActivity extends ActionBarActivity {
     ControlMessage controlMessage;
     MessagesStorage messagesStorage;
     private static ArrayAdapter<String> simpleAdapter;
+    IntentFilter filter;
 
     /* These are for GCM */
-    public static final String PROPERTY_REG_ID = "nhnnext";
+    public static final String PROPERTY_REG_ID = "namhoon";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     GoogleCloudMessaging gcm;
@@ -49,6 +53,7 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         context = getApplicationContext();
+        filter = new IntentFilter("com.google.android.c2dm.intent.RECEIVE");
 
         // GCM 등록과
         Intent registrationIntent = new Intent("com.google.android.c2dm.intent.REGISTER");
@@ -56,7 +61,6 @@ public class MainActivity extends ActionBarActivity {
         registrationIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
         registrationIntent.putExtra("sender", SENDER_ID);
         startService(registrationIntent);
-        Log.i(TAG, "Stack");
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -75,9 +79,17 @@ public class MainActivity extends ActionBarActivity {
 
         messageList.setAdapter(simpleAdapter);
 
-        // this.registerReceiver(GcmBroadcastReceiver, null);
+        this.registerReceiver(mainBroadcastReceiver, filter);
 
-        messagesStorage.getAllMessage();    // Get all messages from DB
+        Scanner scanner = new Scanner(messagesStorage.getAllMessage()); // 디비에서 긁어오기
+
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            controlMessage.getArrayList().add(line);
+        }
+
+        scanner.close();
+
         simpleAdapter.notifyDataSetChanged();   // Notify data set changed
         messageList.setSelection(messageList.getCount() - 1);   // Show end of list
 
@@ -104,15 +116,18 @@ public class MainActivity extends ActionBarActivity {
                     if (inputedText.equals("clear db")) {
                         messagesStorage.clearMessage();
                         simpleAdapter.notifyDataSetChanged();   // notify data set changed
+                        controlMessage.getArrayList().clear();
                     }  // DB clear
 
+                    controlMessage.addMesseage(0, sender, receiver, inputedText);   // Array에 등록
                     msgData.setData(sender, receiver, inputedText);
                     jsonData = gson.toJson(msgData);
-                    controlMessage.addMesseage(0, jsonData);
+                    // controlMessage.addMesseage(0, jsonData);
+
                     messagesStorage.saveMessage(sender, inputedText);
 
                     try {
-                        new MakeRequest().execute(jsonData);
+                        new MakeRequest().execute(jsonData);    // jSon 데이터 전송
                     }
                     catch (Exception e)
                     {
@@ -135,6 +150,7 @@ public class MainActivity extends ActionBarActivity {
                 Log.i(TAG, "This device is not supported.");
                 finish();
             }
+
             return false;
         }
 
@@ -171,6 +187,7 @@ public class MainActivity extends ActionBarActivity {
         String registrationId = prefs.getString(PROPERTY_REG_ID, "");
         if (registrationId.isEmpty()) {
             Log.i(TAG, "Registration not found.");
+
             return "";
         }
 
@@ -181,6 +198,7 @@ public class MainActivity extends ActionBarActivity {
         int currentVersion = getAppVersion(context);
         if (registeredVersion != currentVersion) {
             Log.i(TAG, "App version changed.");
+
             return "";
         }
 
@@ -220,6 +238,7 @@ public class MainActivity extends ActionBarActivity {
                     // Require the user to click a button again, or perform
                     // exponential back-off.
                 }
+
                 return msg;
             }
 
@@ -267,11 +286,42 @@ public class MainActivity extends ActionBarActivity {
         return simpleAdapter;
     }
 
+    private BroadcastReceiver mainBroadcastReceiver =
+        new BroadcastReceiver() {
+
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Bundle extras = intent.getExtras();
+                // GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(context);
+                String messageType = gcm.getMessageType(intent);
+
+                if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
+                    String msg = extras.getString("messageData");
+                    sender = extras.getString("sender");
+                    receiver = extras.getString("receiver");
+
+                    controlMessage.addMesseage(1, sender, receiver, inputedText);   // Array에 등록
+                    messagesStorage.saveMessage(sender, inputedText);
+                }
+
+                // ComponentName comp = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
+                // startWakefulService(context, (intent.setComponent(comp)));
+                // setResultCode(Activity.RESULT_OK);
+            }
+        };
+
     @Override
     protected void onResume() {
         super.onResume();
         // Check device for Play Services APK.
         checkPlayServices();
+        registerReceiver(mainBroadcastReceiver, filter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(mainBroadcastReceiver);
     }
 
     @Override

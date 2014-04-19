@@ -12,7 +12,6 @@ public class MessagesStorage {
     private Context context;
     private SQLiteDatabase database;
     private String sql;
-    private ControlMessage controlMessage;
     private Date date;
 
     public MessagesStorage(Context context) {   // 생성자로 테이블이 없으면 생성
@@ -33,21 +32,22 @@ public class MessagesStorage {
     public void clearMessage() {    // 모든 메세지 삭제
         sql = "DELETE FROM CONVERSATION; VACUUM;";
         database.execSQL(sql);
-
-        controlMessage.getArrayList().clear();
     }
 
-    public void getAllMessage() {   // 메세지 가져오기
+    public String getAllMessage() {   // 메세지 가져오기
         sql = "SELECT * FROM CONVERSATION;";
         Cursor cursor = database.rawQuery(sql, null);
-
-        controlMessage = ControlMessage.getInstance();
+        StringBuffer sb = new StringBuffer();
+        String NEWLINE = System.getProperty("line.separator");
 
         while(cursor.moveToNext()) {
             // Log.i("SQLiteTest", "ID : " + cursor.getString(0) + " / SENDER : " + cursor.getString(1) + " / CONTENT : " + cursor.getString(2));
-            controlMessage.getArrayList().add(cursor.getString(1) + " : " + cursor.getString(2));
+            // controlMessage.getArrayList().add(cursor.getString(1) + " : " + cursor.getString(2));
+            sb.append(cursor.getString(1) + " : " + cursor.getString(2) + NEWLINE);
         }
 
         cursor.close();
+
+        return sb.toString();
     }
 }
